@@ -233,6 +233,24 @@
                     </div>
                 </div>
 
+                 <!-- Resident Notification Modal -->
+                <div id="residentNotificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                        <div class="p-6 text-center">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">Assalamualaikum dan Salam Sejahtera!</h3>
+                            <div class="text-left space-y-3 text-gray-600">
+                                <p>Kepada semua residen PSA yang dihormati😊</p>
+                                <p>Mohon perhatian agar bayaran bulanan securiti dapat diselesaikan mengikut jadual yang ditetapkan.</p>
+                                <p>Komitmen Tuan/Puan amat kami hargai dalam memastikan kelancaran operasi keselamatan dan kesejahteraan komuniti.</p>
+                                <p>Terima kasih atas kerjasama dan sokongan yang berterusan🙏</p>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 text-center rounded-b-lg">
+                             <button onclick="closeResidentNotificationModal()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Faham</button>
+                        </div>
+                    </div>
+                </div>
+
 
             </div>
 
@@ -430,8 +448,36 @@
             }
         }
         
+        function openResidentNotificationModal() {
+            document.getElementById('residentNotificationModal').classList.remove('hidden');
+        }
+
+        function closeResidentNotificationModal() {
+            document.getElementById('residentNotificationModal').classList.add('hidden');
+            proceedWithSearch();
+        }
+        
         // --- CARIAN & BAYARAN LOGIC ---
         function searchResidents() {
+            if (isAdminLoggedIn) {
+                proceedWithSearch();
+                return;
+            }
+            
+            const input = document.getElementById('searchInput').value;
+            const password = document.getElementById('residentPassword').value;
+
+            if (!input || !password) {
+                 document.getElementById('residentLoginError').innerText = 'Sila isi nombor rumah dan kata laluan.';
+                 document.getElementById('residentLoginError').classList.remove('hidden');
+                 return;
+            }
+            document.getElementById('residentLoginError').classList.add('hidden');
+            
+            openResidentNotificationModal();
+        }
+        
+        function proceedWithSearch() {
             const input = document.getElementById('searchInput').value.toLowerCase();
             const resultsContainer = document.getElementById('searchResults');
             const noResults = document.getElementById('noResults');
@@ -443,6 +489,7 @@
                 const password = document.getElementById('residentPassword').value;
                 const RESIDENT_PASSWORD = '1234';
                 if (password !== RESIDENT_PASSWORD) {
+                    loginError.innerText = 'Maklumat yang dimasukkan salah. Sila cuba lagi.';
                     loginError.classList.remove('hidden');
                     noResults.classList.add('hidden');
                     return;
@@ -915,7 +962,7 @@
             const selector = document.getElementById('modalYearSelector');
             if(!selector) return;
             selector.innerHTML = '';
-            const mainYearSelector = document.getElementById('yearSelector');
+            const mainYearSelector = document.getElementById('dashboardYearSelector');
             const defaultYear = mainYearSelector ? mainYearSelector.value : new Date().getFullYear();
             
             const currentYear = new Date().getFullYear();
