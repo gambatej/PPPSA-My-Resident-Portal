@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Kutipan Yuran Bulanan PPSA - Persatuan Penduduk Pelangi Seri Alam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Libraries for PDF and Excel Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .tab {
+            border-bottom-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-blue-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
+        
+        <!-- Header --><header class="bg-white shadow-md rounded-lg p-6 mb-8 relative">
+            <div class="absolute top-4 right-4">
+                <button id="adminLoginBtn" onclick="openLoginModal()" class="bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-gray-800 transition">Log Masuk Admin</button>
+                <button id="logoutBtn" onclick="handleLogout()" class="hidden bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Log Keluar</button>
+            </div>
+            <div class="flex justify-center mb-4">
+                <img id="logo" src="https://i.ibb.co/bMNpkTMK/Whats-App-Image-2024-02-28-at-09-29-02-63a8a29f.jpg" alt="Logo Persatuan" class="h-48 w-48 rounded-full object-cover" crossorigin="anonymous">
+            </div>
+            <div class="text-center">
+                <h1 class="text-2xl sm:text-3xl font-bold text-blue-600">Portal Kutipan Yuran Bulanan PPSA</h1>
+                <p class="text-md text-gray-500">Persatuan Penduduk Pelangi Seri Alam</p>
+                <div id="current-time" class="text-sm text-gray-500 mt-2"></div>
+            </div>
+        </header>
+
+        <!-- Main Content --><main class="bg-white shadow-md rounded-lg p-6">
+            <!-- Tabs --><div class="border-b border-gray-200 mb-6">
+                <nav class="flex space-x-4" aria-label="Tabs">
+                    <button id="tab-dashboard" class="px-3 py-2 font-medium text-sm rounded-t-md tab-active" onclick="switchView('dashboard')">Dashboard</button>
+                    <button id="tab-carian" class="px-3 py-2 font-medium text-sm rounded-t-md tab" onclick="switchView('carian')">Rekod Bayaran & Resit</button>
+                </nav>
+            </div>
+
+            <!-- Dashboard View --><div id="view-dashboard">
+                 <h2 class="text-xl font-semibold mb-4">Peratusan Kutipan Yuran Bulanan 2025</h2>
+                 <p class="text-gray-500 mb-6">Carta di bawah menunjukkan peratusan penduduk yang telah membuat bayaran yuran untuk setiap bulan. Pilih jalan untuk melihat data yang lebih terperinci.</p>
+                <div id="street-filter-buttons" class="flex flex-wrap gap-2 mb-6">
+                    <!-- Street filter buttons will be generated here -->
+                </div>
+                <div class="w-full h-96 bg-gray-50 p-4 rounded-lg">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Carian & Bayaran View --><div id="view-carian" class="hidden">
+                 <div id="search-form-container">
+                    <!-- This part is for the resident view prompt -->
+                    <div id="resident-prompt" class="max-w-xl mx-auto text-center">
+                        <h2 class="text-xl font-semibold mb-2">Semak Rekod Bayaran Anda</h2>
+                        <p class="text-gray-500 mb-6">Sila masukkan nama atau nombor rumah dan kata laluan untuk melihat rekod anda.</p>
+                    </div>
+                     <!-- This is for the admin view prompt -->
+                    <div id="admin-prompt" class="hidden mb-6">
+                        <h2 class="text-xl font-semibold mb-2">Carian Rekod Bayaran Penduduk</h2>
+                        <p class="text-gray-500">Gunakan ruangan di bawah untuk menapis senarai penduduk.</p>
+                    </div>
+                    
+                    <!-- This is the actual form, some parts are hidden/shown -->
+                    <div class="max-w-xl" id="form-controls">
+                         <div class="space-y-4">
+                            <div>
+                                <label for="searchInput" class="block text-sm font-medium text-gray-700">Nama Pemilik / No. Rumah</label>
+                                <input type="text" id="searchInput" placeholder="Cth: Ahmad Faizal atau 1..." class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            </div>
+                            <div id="resident-password-container">
+                                <label for="residentPassword" class="block text-sm font-medium text-gray-700">Kata Laluan</label>
+                                <input type="password" id="residentPassword" placeholder="Kata Laluan Anda" class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                            </div>
+                        </div>
+
+                        <p id="residentLoginError" class="text-red-500 text-center text-sm mt-4 hidden">Maklumat yang dimasukkan salah. Sila cuba lagi.</p>
+                        
+                        <div id="resident-search-button-container" class="mt-6">
+                            <button onclick="searchResidents()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                                Semak Rekod
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="searchResults" class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Search results will be populated here --></div>
+                
+                <div id="noResults" class="text-center py-10 text-gray-500 hidden">
+                    <p>Tiada hasil carian ditemui.</p>
+                </div>
+
+                <!-- Payment Modal --><div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl transform transition-all max-h-screen overflow-y-auto">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-2xl font-bold" id="modalOwnerName"></h3>
+                                    <p class="text-gray-600" id="modalHouseNumber"></p>
+                                </div>
+                                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <h4 class="font-semibold text-lg mb-4">Status Bayaran Yuran 2025</h4>
+                             <p id="admin-mode-notice" class="hidden text-sm text-center bg-yellow-100 text-yellow-800 p-2 rounded-md mb-4">Mod Admin: Klik pada mana-mana bulan untuk menukar status bayaran.</p>
+                            <div id="monthlyPayments" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                <!-- Monthly payment statuses will be populated here --></div>
+                        </div>
+                        <div id="payment-footer" class="p-6 bg-gray-50 rounded-b-lg flex flex-col sm:flex-row justify-end items-center gap-4">
+                             <div class="flex items-center space-x-2 text-gray-600">
+                                <span class="font-medium">Jumlah Dipilih:</span>
+                                <span id="totalSelected" class="font-bold text-blue-600">RM 0.00</span>
+                            </div>
+                            <button id="payButton" onclick="processPayment()" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Bayar Sekarang
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Invoice/Success Modal -->
+                <div id="invoiceSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all">
+                        <div class="p-6 text-center">
+                            <div class="flex justify-center items-center w-16 h-16 mx-auto bg-green-100 rounded-full mb-4">
+                                <svg id="invoiceModalIcon" class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <h3 id="invoiceModalTitle" class="text-2xl font-bold text-gray-800">Pembayaran Berjaya!</h3>
+                            <p id="invoiceModalText" class="text-gray-500 mt-2 mb-6">Terima kasih. Invois anda telah sedia untuk dimuat turun.</p>
+                            <div class="space-y-3 sm:space-y-0 sm:flex sm:space-x-4 sm:justify-center">
+                                <button id="downloadPdfBtn" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-300">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 11-2 0V4H6v12a1 1 0 11-2 0V4zm5 10a1 1 0 100 2h2a1 1 0 100-2H9z" clip-rule="evenodd" /></svg>
+                                    Muat Turun PDF
+                                </button>
+                                <button id="downloadExcelBtn" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300">
+                                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3 3a1 1 0 00-1 1v2a1 1 0 001 1h2a1 1 0 001-1V9a1 1 0 00-1-1H5zm6 0a1 1 0 00-1 1v2a1 1 0 001 1h2a1 1 0 001-1V9a1 1 0 00-1-1h-2z" /></svg>
+                                    Muat Turun Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50 text-center rounded-b-lg">
+                             <button onclick="closeInvoiceModal()" class="text-gray-600 font-medium hover:text-gray-800">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Login Modal -->
+                <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm">
+                        <div class="p-6 border-b">
+                            <h3 class="text-xl font-bold">Log Masuk Admin</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-4">
+                                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Nama Pengguna</label>
+                                <input type="text" id="username" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div class="mb-4">
+                                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Kata Laluan</label>
+                                <input type="password" id="password" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <p id="loginError" class="text-red-500 text-sm mb-4 hidden">Nama pengguna atau kata laluan tidak sah.</p>
+                            <button onclick="handleLogin()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Log Masuk</button>
+                        </div>
+                         <div class="p-4 bg-gray-50 text-center rounded-b-lg">
+                             <button onclick="closeLoginModal()" class="text-gray-600 font-medium hover:text-gray-800">Batal</button>
+                        </div>
+                    </div>
+                </div>
+                
+                 <!-- Admin Payment Details Modal -->
+                <div id="adminPaymentDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-sm">
+                        <div class="p-6 border-b">
+                            <h3 class="text-xl font-bold">Masukkan Maklumat Bayaran</h3>
+                            <p id="adminDetailsMonth" class="text-sm text-gray-500"></p>
+                        </div>
+                        <div class="p-6">
+                            <input type="hidden" id="adminDetailsResidentId">
+                            <input type="hidden" id="adminDetailsMonthKey">
+                            <div class="mb-4">
+                                <label for="paymentDate" class="block text-sm font-medium text-gray-700 mb-1">Tarikh Bayaran</label>
+                                <input type="date" id="paymentDate" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div class="mb-4">
+                                <label for="paymentMode" class="block text-sm font-medium text-gray-700 mb-1">Mod Pembayaran</label>
+                                <select id="paymentMode" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                                    <option value="Online">Online</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="QR Code">QR Code</option>
+                                </select>
+                            </div>
+                            <button onclick="handleAdminReceiptGeneration()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Sahkan & Jana Resit</button>
+                        </div>
+                         <div class="p-4 bg-gray-50 text-center rounded-b-lg">
+                             <button onclick="closeAdminDetailsModal()" class="text-gray-600 font-medium hover:text-gray-800">Batal</button>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+        </main>
+        
+        <!-- Footer --><footer class="text-center mt-8 text-sm text-gray-500">
+            <p>&copy; 2025 Persatuan Penduduk Pelangi Seri Alam. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- DATA ---
+        let residents = [];
+        let selectedResidentId = null;
+        let paymentChart = null;
+        let selectedStreet = 'Semua';
+        let isAdminLoggedIn = false;
+
+        const months = [
+            "Januari", "Februari", "Mac", "April", "Mei", "Jun", 
+            "Julai", "Ogos", "September", "Oktober", "November", "Disember"
+        ];
+        
+        const feePerMonth = 50.00;
+
+        // --- MOCK DATA GENERATION ---
+        function generateMockData() {
+            const names = [
+                "Ahmad Faizal", "Siti Nurhaliza", "Tan Wei Chong", "Priya Krishnan", "Mohamad Hafiz", "Nurul Aisyah", 
+                "Lee Boon Siew", "Kavita Singh", "Zulhelmi Azizan", "Farah Adibah", "Goh Liu Ying", "Murali Ramasamy",
+                "Azman Hashim", "Fatimah Zahra", "Wong Kar Wai", "Anjali Sharma", "Iskandar Zulkarnain", "Amira Syuhada",
+                "Chen Long", "Deepika Padukone", "Riduan Abdullah", "Yasmin Ahmad", "Lim Guan Eng", "Meera Jasmine",
+                "Firdaus Rahman", "Hannah Yeoh", "Rajinikanth Rao", "Siti Saleha", "Amirul Mukminin", "Michelle Yeoh",
+                "Ravi Chandran", "Jasmine Suraya", "Khairul Anuar", "Pang Li Wei", "Kumar Sanu", "Aina Abdul",
+                "Haris Iskandar", "Leong Mun Yee", "Suresh Kumar", "Diana Danielle",
+                // Added 56 more residents
+                "Syed Saddiq", "Neelofa", "Chong Wei Feng", "Shalini Kumar", "Faisal Halim", "Mira Filzah",
+                "Teo Ee Yi", "Geeta Basra", "Alif Satar", "Janna Nick", "Ong Yew Sin", "Trisha Krishnan",
+                "Kamal Adli", "Uqasha Senrose", "Goh V Shem", "Samantha Ruth Prabhu", "Nazir Razak", "Nora Danish",
+                "Tan Wee Kiong", "Anushka Shetty", "Remy Ishak", "Fazura", "Aaron Chia", "Kajal Aggarwal",
+                "Shaheizy Sam", "Amyra Rosli", "Soh Wooi Yik", "Nayanthara", "Bront Palarae", "Izara Aishah",
+                "Lee Zii Jia", "Tamannaah Bhatia", "Zizan Razak", "Maya Karin", "Liew Daren", "Hansika Motwani",
+                "Fattah Amin", "Sari Yanti", "Misbun Sidek", "Asin Thottumkal", "Hairul Azreen", "Lisa Surihani",
+                "Roslin Hashim", "Shriya Saran", "Adi Putra", "Scha Alyahya", "Woon Khe Wei", "Ileana D'Cruz",
+                "Beto Kusyairy", "Tiz Zaqyah", "Hafizh Syahrin", "Genelia D'Souza", "Iedil Putra", "Nur Fathia",
+                "Azlan Iskandar", "Pooja Hegde"
+            ];
+            const genders = ['Lelaki', 'Perempuan'];
+            let generatedResidents = [];
+            const paymentModes = ['Online', 'Cash', 'QR Code'];
+
+            for (let i = 1; i <= 96; i++) {
+                const payments = {};
+                months.forEach((month, index) => {
+                    const monthKey = `2025-${(index + 1).toString().padStart(2, '0')}`;
+                    if (Math.random() < 0.7) { // 70% chance of being paid
+                        payments[monthKey] = {
+                            status: 'paid',
+                            date: `2025-${(index + 1).toString().padStart(2, '0')}-${(Math.floor(Math.random() * 28) + 1).toString().padStart(2, '0')}`,
+                            mode: paymentModes[Math.floor(Math.random() * paymentModes.length)]
+                        };
+                    } else {
+                        payments[monthKey] = { status: 'unpaid' };
+                    }
+                });
+
+                let streetName = '';
+                if (i >= 1 && i <= 40) {
+                    streetName = 'Lorong Lautan Samudera 9/3';
+                } else if (i >= 41 && i <= 73) {
+                    streetName = 'Lorong Lautan Samudera 9/1';
+                } else if (i >= 74 && i <= 89) {
+                    streetName = 'Lorong Lautan Samudera 9/9';
+                } else { // 90 - 96
+                    streetName = 'Lorong Lautan Samudera 9/8';
+                }
+
+                generatedResidents.push({
+                    id: i,
+                    houseNumber: `No. ${i}, ${streetName}`,
+                    ownerName: names[i - 1],
+                    gender: genders[Math.floor(Math.random() * genders.length)],
+                    payments: payments
+                });
+            }
+            residents = generatedResidents;
+        }
+
+        // --- VIEW SWITCHING LOGIC ---
+        function switchView(view) {
+            const carianView = document.getElementById('view-carian');
+            const dashboardView = document.getElementById('view-dashboard');
+            const tabCarian = document.getElementById('tab-carian');
+            const tabDashboard = document.getElementById('tab-dashboard');
+            
+            const searchInput = document.getElementById('searchInput');
+            const passwordContainer = document.getElementById('resident-password-container');
+            const searchButtonContainer = document.getElementById('resident-search-button-container');
+            const residentPrompt = document.getElementById('resident-prompt');
+            const adminPrompt = document.getElementById('admin-prompt');
+            const formControls = document.getElementById('form-controls');
+
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('noResults').classList.add('hidden');
+            document.getElementById('residentLoginError').classList.add('hidden');
+            searchInput.value = '';
+            document.getElementById('residentPassword').value = '';
+            searchInput.onkeyup = null;
+
+
+            if (view === 'dashboard') {
+                carianView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                tabCarian.classList.remove('tab-active');
+                tabDashboard.classList.add('tab-active');
+                renderStreetFilters();
+                renderDashboard();
+            } else { // 'carian' view
+                carianView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                tabDashboard.classList.remove('tab-active');
+                tabCarian.classList.add('tab-active');
+
+                if (isAdminLoggedIn) {
+                    residentPrompt.classList.add('hidden');
+                    passwordContainer.classList.add('hidden');
+                    searchButtonContainer.classList.add('hidden');
+                    adminPrompt.classList.remove('hidden');
+                    formControls.classList.remove('mx-auto');
+                    
+                    searchInput.onkeyup = () => searchResidents();
+                    searchResidents(); // Show all residents for admin
+                } else {
+                    residentPrompt.classList.remove('hidden');
+                    passwordContainer.classList.remove('hidden');
+                    searchButtonContainer.classList.remove('hidden');
+                    adminPrompt.classList.add('hidden');
+                    formControls.classList.add('mx-auto');
+                }
+            }
+        }
+        
+        // --- ADMIN LOGIN LOGIC ---
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+        
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            // Hardcoded credentials for demonstration
+            if (username === 'admin' && password === 'password123') {
+                isAdminLoggedIn = true;
+                updateAdminUI();
+                closeLoginModal();
+                const activeTab = document.querySelector('.tab-active').id;
+                if (activeTab === 'tab-carian') {
+                    switchView('carian');
+                }
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+        
+        function handleLogout() {
+            isAdminLoggedIn = false;
+            updateAdminUI();
+            const activeTab = document.querySelector('.tab-active').id;
+            if (activeTab === 'tab-carian') {
+                switchView('carian');
+            }
+        }
+
+        function updateAdminUI() {
+            const loginBtn = document.getElementById('adminLoginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (isAdminLoggedIn) {
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+            }
+        }
+        
+        // --- CARIAN & BAYARAN LOGIC ---
+        function searchResidents() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const resultsContainer = document.getElementById('searchResults');
+            const noResults = document.getElementById('noResults');
+            const loginError = document.getElementById('residentLoginError');
+            
+            resultsContainer.innerHTML = '';
+            
+            if (!isAdminLoggedIn) {
+                const password = document.getElementById('residentPassword').value;
+                const RESIDENT_PASSWORD = '1234';
+                if (password !== RESIDENT_PASSWORD) {
+                    loginError.classList.remove('hidden');
+                    noResults.classList.add('hidden');
+                    return;
+                }
+            }
+            loginError.classList.add('hidden');
+
+            let filteredResidents = [];
+            
+            const filterLogic = r => {
+                const ownerName = r.ownerName.toLowerCase();
+                const houseNumberStr = r.houseNumber.toLowerCase();
+                // Extracts house number, e.g., from "no. 1, ..." to "1"
+                const houseNoOnly = houseNumberStr.split(',')[0].replace('no. ', '').trim();
+
+                return ownerName.includes(input) || 
+                       houseNumberStr.includes(input) || // Allows searching street name
+                       houseNoOnly.startsWith(input); // Specifically allows searching by number
+            };
+            
+            if (isAdminLoggedIn) {
+                 filteredResidents = residents.filter(filterLogic);
+            } else if (input) {
+                 filteredResidents = residents.filter(filterLogic);
+            }
+
+            if (filteredResidents.length === 0 && (input || isAdminLoggedIn)) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            filteredResidents.forEach(resident => {
+                const unpaidMonths = Object.values(resident.payments).filter(p => p.status === 'unpaid').length;
+                
+                const card = `
+                    <div class="border rounded-lg p-4 cursor-pointer hover:shadow-lg hover:border-blue-500 transition" onclick="openModal(${resident.id})">
+                        <div class="flex justify-between items-start">
+                           <div>
+                                <p class="font-bold text-lg">${resident.ownerName}</p>
+                                <p class="text-sm text-gray-500">${resident.houseNumber}</p>
+                           </div>
+                           <span class="text-xs font-semibold px-2 py-1 rounded-full ${resident.gender === 'Lelaki' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'}">
+                                ${resident.gender}
+                           </span>
+                        </div>
+                        <div class="mt-4 pt-4 border-t">
+                            <p class="text-sm">Yuran Tertunggak: <span class="font-bold ${unpaidMonths > 0 ? 'text-red-600' : 'text-green-600'}">${unpaidMonths} bulan</span></p>
+                        </div>
+                    </div>
+                `;
+                resultsContainer.innerHTML += card;
+            });
+        }
+        
+        function openModal(residentId) {
+            selectedResidentId = residentId;
+            const resident = residents.find(r => r.id === residentId);
+            if (!resident) return;
+
+            document.getElementById('modalOwnerName').innerText = resident.ownerName;
+            document.getElementById('modalHouseNumber').innerText = resident.houseNumber;
+            
+            document.getElementById('payment-footer').style.display = isAdminLoggedIn ? 'none' : 'flex';
+            document.getElementById('admin-mode-notice').style.display = isAdminLoggedIn ? 'block' : 'none';
+
+            const monthlyPaymentsContainer = document.getElementById('monthlyPayments');
+            monthlyPaymentsContainer.innerHTML = '';
+
+            Object.entries(resident.payments).forEach(([monthKey, paymentInfo]) => {
+                const isPaid = paymentInfo.status === 'paid';
+                const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
+                const paymentDiv = document.createElement('div');
+                
+                paymentDiv.className = `p-3 rounded-lg border-2 text-center transition ${isPaid ? 'bg-green-100 border-green-300' : 'bg-white border-gray-300'}`;
+                paymentDiv.dataset.monthKey = monthKey;
+
+                let content = `
+                    <p class="font-semibold">${monthName}</p>
+                    <p class="text-sm ${isPaid ? 'text-green-700' : 'text-red-700'}">${isPaid ? 'Sudah Bayar' : 'Belum Bayar'}</p>
+                `;
+
+                if (isAdminLoggedIn) {
+                    paymentDiv.classList.add('cursor-pointer', 'hover:border-blue-500');
+                    paymentDiv.onclick = (event) => {
+                        if (event.target.tagName !== 'BUTTON') {
+                            adminTogglePaymentStatus(resident.id, monthKey);
+                        }
+                    };
+                    if (isPaid) {
+                        const buttonText = paymentInfo.date ? 'Jana Semula Resit' : 'Masukkan Maklumat';
+                        content += `
+                            <button onclick="event.stopPropagation(); openAdminDetailsModal(${resident.id}, '${monthKey}')" class="mt-2 text-xs bg-blue-500 text-white font-semibold py-1 px-3 rounded-full hover:bg-blue-600 transition">
+                                ${buttonText}
+                            </button>
+                        `;
+                    }
+                } else if (!isPaid) {
+                     paymentDiv.classList.add('cursor-pointer', 'hover:border-blue-500');
+                     paymentDiv.onclick = () => toggleMonthSelection(paymentDiv);
+                }
+                
+                paymentDiv.innerHTML = content;
+                monthlyPaymentsContainer.appendChild(paymentDiv);
+            });
+            
+            updateTotalSelected();
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function adminTogglePaymentStatus(residentId, monthKey) {
+            const resident = residents.find(r => r.id === residentId);
+            if (!resident) return;
+
+            if (resident.payments[monthKey].status === 'paid') {
+                resident.payments[monthKey] = { status: 'unpaid' };
+            } else {
+                resident.payments[monthKey] = { status: 'paid', date: null, mode: null };
+            }
+            
+            openModal(residentId);
+        }
+
+        function openAdminDetailsModal(residentId, monthKey) {
+            const resident = residents.find(r => r.id === residentId);
+            const paymentInfo = resident.payments[monthKey];
+            const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
+            
+            document.getElementById('adminDetailsResidentId').value = residentId;
+            document.getElementById('adminDetailsMonthKey').value = monthKey;
+            document.getElementById('adminDetailsMonth').innerText = `Untuk Bulan: ${monthName}`;
+            
+            document.getElementById('paymentDate').value = paymentInfo.date || '';
+            document.getElementById('paymentMode').value = paymentInfo.mode || 'Online';
+            
+            document.getElementById('adminPaymentDetailsModal').classList.remove('hidden');
+        }
+
+        function closeAdminDetailsModal() {
+            document.getElementById('adminPaymentDetailsModal').classList.add('hidden');
+        }
+        
+        function handleAdminReceiptGeneration() {
+            const residentId = document.getElementById('adminDetailsResidentId').value;
+            const monthKey = document.getElementById('adminDetailsMonthKey').value;
+            const paymentDate = document.getElementById('paymentDate').value;
+            const paymentMode = document.getElementById('paymentMode').value;
+            
+            if (!paymentDate) {
+                alert('Sila masukkan tarikh bayaran.');
+                return;
+            }
+
+            const resident = residents.find(r => r.id == residentId);
+            resident.payments[monthKey] = {
+                status: 'paid',
+                date: paymentDate,
+                mode: paymentMode
+            };
+            
+            const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
+            const paidMonthInfo = [{ name: monthName, amount: feePerMonth, date: paymentDate, mode: paymentMode }];
+
+            closeAdminDetailsModal();
+            openModal(residentId); // Refresh payment modal
+            
+            document.getElementById('invoiceModalTitle').innerText = 'Jana Invois';
+            document.getElementById('invoiceModalText').innerText = 'Invois untuk bayaran ini sedia untuk dimuat turun.';
+            const iconContainer = document.getElementById('invoiceModalIcon').parentElement;
+            iconContainer.classList.remove('bg-green-100');
+            iconContainer.classList.add('bg-blue-100');
+            const icon = document.getElementById('invoiceModalIcon');
+            icon.classList.remove('text-green-600');
+            icon.classList.add('text-blue-600');
+            
+            showInvoiceModal(resident, paidMonthInfo);
+        }
+
+        function closeModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+            if (isAdminLoggedIn) {
+                searchResidents();
+            }
+            selectedResidentId = null;
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceSuccessModal').classList.add('hidden');
+        }
+        
+        function toggleMonthSelection(element) {
+            element.classList.toggle('bg-blue-100');
+            element.classList.toggle('border-blue-500');
+            element.classList.toggle('selected');
+            updateTotalSelected();
+        }
+
+        function updateTotalSelected() {
+            const selectedMonths = document.querySelectorAll('#monthlyPayments .selected').length;
+            const total = selectedMonths * feePerMonth;
+            document.getElementById('totalSelected').innerText = `RM ${total.toFixed(2)}`;
+            document.getElementById('payButton').disabled = selectedMonths === 0;
+        }
+
+        function processPayment() {
+            if (!selectedResidentId) return;
+            const resident = residents.find(r => r.id === selectedResidentId);
+            const selectedElements = document.querySelectorAll('#monthlyPayments .selected');
+            
+            if (selectedElements.length === 0) return;
+
+            const paidMonthsInfo = [];
+            const today = new Date().toISOString().split('T')[0];
+            selectedElements.forEach(el => {
+                const monthKey = el.dataset.monthKey;
+                resident.payments[monthKey] = { status: 'paid', date: today, mode: 'Online'}; // Default for resident payment
+                const monthName = el.querySelector('.font-semibold').innerText;
+                paidMonthsInfo.push({ name: monthName, amount: feePerMonth, date: today, mode: 'Online' });
+            });
+            
+            closeModal();
+            searchResidents();
+            
+            document.getElementById('invoiceModalTitle').innerText = 'Pembayaran Berjaya!';
+            document.getElementById('invoiceModalText').innerText = 'Terima kasih. Invois anda telah sedia untuk dimuat turun.';
+            const iconContainer = document.getElementById('invoiceModalIcon').parentElement;
+            iconContainer.classList.remove('bg-blue-100');
+            iconContainer.classList.add('bg-green-100');
+            document.getElementById('invoiceModalIcon').classList.remove('text-blue-600');
+            document.getElementById('invoiceModalIcon').classList.add('text-green-600');
+            
+            showInvoiceModal(resident, paidMonthsInfo);
+        }
+
+        function showInvoiceModal(resident, paidMonthsInfo) {
+            const modal = document.getElementById('invoiceSuccessModal');
+            const pdfBtn = document.getElementById('downloadPdfBtn');
+            const excelBtn = document.getElementById('downloadExcelBtn');
+
+            const newPdfBtn = pdfBtn.cloneNode(true);
+            pdfBtn.parentNode.replaceChild(newPdfBtn, pdfBtn);
+            
+            const newExcelBtn = excelBtn.cloneNode(true);
+            excelBtn.parentNode.replaceChild(newExcelBtn, excelBtn);
+
+            newPdfBtn.onclick = () => generatePdfInvoice(resident, paidMonthsInfo);
+            newExcelBtn.onclick = () => generateExcelInvoice(resident, paidMonthsInfo);
+
+            modal.classList.remove('hidden');
+        }
+        
+        // --- INVOICE GENERATION ---
+        
+        function numberToWordsMY(num) {
+            const units = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Lapan", "Sembilan"];
+            const teens = ["Sepuluh", "Sebelas", "Dua Belas", "Tiga Belas", "Empat Belas", "Lima Belas", "Enam Belas", "Tujuh Belas", "Lapan Belas", "Sembilan Belas"];
+            const tens = ["", "", "Dua Puluh", "Tiga Puluh", "Empat Puluh", "Lima Puluh", "Enam Puluh", "Tujuh Puluh", "Lapan Puluh", "Sembilan Puluh"];
+            
+            if (num === 0) return "Kosong";
+            let words = "";
+            if (Math.floor(num / 100) > 0) {
+                words += (Math.floor(num / 100) === 1 ? "Seratus" : units[Math.floor(num / 100)] + " Ratus") + " ";
+                num %= 100;
+            }
+            if (num > 0) {
+                if (num < 10) { words += units[num]; } 
+                else if (num < 20) { words += teens[num - 10]; } 
+                else {
+                    words += tens[Math.floor(num / 10)];
+                    if (num % 10 > 0) { words += " " + units[num % 10]; }
+                }
+            }
+            return words.trim() + " Sahaja";
+        }
+
+        function generatePaymentReference(houseNumberStr) {
+            const houseNoMatch = houseNumberStr.match(/No\. (\d+)/);
+            const houseNo = houseNoMatch ? houseNoMatch[1] : '';
+            const streetMatch = houseNumberStr.match(/, (.*)/);
+            if (!streetMatch) return houseNo;
+            const streetName = streetMatch[1];
+            const abbreviation = streetName.split(' ').map(w => w[0]).join('').toUpperCase();
+            const numbers = streetName.match(/\d+\/\d+/);
+            if (!numbers) return `${abbreviation}/${houseNo}`;
+            const streetCode = numbers[0].replace('/', '');
+            return `${abbreviation.slice(0,3)}${streetCode}/${houseNo}`;
+        }
+        
+        function generatePdfInvoice(resident, paidMonthsInfo) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const today = new Date();
+            const invoiceDate = today.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' });
+            const invoiceId = `PPS-${today.getFullYear()}-${today.getMonth() + 1}-${String(resident.id).padStart(3, '0')}`;
+            const totalPaid = paidMonthsInfo.reduce((sum, item) => sum + item.amount, 0);
+            const paymentRef = generatePaymentReference(resident.houseNumber);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Persatuan Penduduk Pelangi Seri Alam', 15, 20);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text('Pejabat Persatuan, Balai Komuniti,', 15, 26);
+            doc.text('Taman Pelangi Seri Alam,', 15, 31);
+            doc.text('42300 Puncak Alam, Selangor', 15, 36);
+            doc.text('Email: ppsa.bendahari@gmail.com', 15, 41);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('INVOIS RASMI', 205, 55, { align: 'right' });
+
+            const [houseNo, street] = resident.houseNumber.split(', ');
+            doc.setFontSize(10);
+            doc.text('Kepada:', 15, 60);
+            doc.setFont('helvetica', 'bold');
+            doc.text(resident.ownerName, 15, 65);
+            doc.setFont('helvetica', 'normal');
+            doc.text(houseNo + ', ' + street, 15, 70);
+            doc.text('Taman Pelangi Seri Alam', 15, 75);
+            doc.text('42300 Puncak Alam, Selangor', 15, 80);
+
+            doc.text(`No. Invois: ${invoiceId}`, 205, 65, { align: 'right' });
+            doc.text(`Tarikh: ${invoiceDate}`, 205, 70, { align: 'right' });
+
+            const paymentDetails = paidMonthsInfo[0]; // Assuming one or more months paid on the same day/mode
+            if(paymentDetails.date && paymentDetails.mode) {
+                doc.text(`Tarikh Bayaran: ${new Date(paymentDetails.date).toLocaleDateString('ms-MY')}`, 205, 75, { align: 'right' });
+                doc.text(`Mod Bayaran: ${paymentDetails.mode}`, 205, 80, { align: 'right' });
+            }
+
+
+            const tableColumn = ["Perkara", "Jumlah (RM)"];
+            const tableRows = [];
+            paidMonthsInfo.forEach(item => {
+                tableRows.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} 2025`, item.amount.toFixed(2)]);
+            });
+
+            autoTable(doc, {
+                head: [tableColumn], body: tableRows, startY: 90, theme: 'grid', headStyles: { fillColor: [22, 78, 99] }
+            });
+            
+            let finalY = doc.lastAutoTable.finalY;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Jumlah Keseluruhan (RM)', 150, finalY + 10);
+            doc.text(totalPaid.toFixed(2), 205, finalY + 10, { align: 'right' });
+            finalY += 10;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Ringgit Malaysia: ${numberToWordsMY(totalPaid)}`, 15, finalY + 10);
+            finalY += 15;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Kaedah Pembayaran:', 15, finalY + 10);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Sila buat pembayaran ke akaun bank rasmi persatuan', 15, finalY + 15);
+            doc.text('Nama Bank: Maybank', 15, finalY + 20);
+            doc.text('Nama Akaun: Persatuan Penduduk Pelangi Seri Alam', 15, finalY + 25);
+            doc.text('No. Akaun: 5621 0211 9988', 15, finalY + 30);
+            doc.text(`Sila masukkan nombor rumah anda (eg., ${paymentRef}) sebagai rujukan pembayaran`, 15, finalY + 35);
+            
+            doc.text('Terima kasih atas kerjasama dan pembayaran anda.', 105, 280, { align: 'center' });
+
+            doc.save(`Invois-${resident.ownerName.replace(/ /g, '_')}-${invoiceDate}.pdf`);
+        }
+        
+        function generateExcelInvoice(resident, paidMonthsInfo) {
+            const today = new Date();
+            const invoiceDate = today.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' });
+            const invoiceId = `PPS-${today.getFullYear()}-${today.getMonth() + 1}-${String(resident.id).padStart(3, '0')}`;
+            const totalPaid = paidMonthsInfo.reduce((sum, item) => sum + item.amount, 0);
+            const paymentRef = generatePaymentReference(resident.houseNumber);
+            const paymentDetails = paidMonthsInfo[0];
+
+            const ws_data = [
+                ["Persatuan Penduduk Pelangi Seri Alam"], ["Pejabat Persatuan, Balai Komuniti, Taman Pelangi Seri Alam"],
+                ["42300 Puncak Alam, Selangor"], ["Email: ppsa.bendahari@gmail.com"], [], ["INVOIS RASMI"], [],
+                ["Kepada:", resident.ownerName], ["", resident.houseNumber], ["", "Taman Pelangi Seri Alam"], ["", "42300 Puncak Alam, Selangor"], [],
+                ["No. Invois:", invoiceId], ["Tarikh:", invoiceDate]
+            ];
+            
+            if(paymentDetails.date && paymentDetails.mode) {
+                 ws_data.push(["Tarikh Bayaran:", new Date(paymentDetails.date).toLocaleDateString('ms-MY')]);
+                 ws_data.push(["Mod Bayaran:", paymentDetails.mode]);
+            }
+            
+            ws_data.push([], ["Perkara", "Jumlah (RM)"]);
+
+            paidMonthsInfo.forEach(item => {
+                ws_data.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} 2025`, item.amount]);
+            });
+
+            ws_data.push([], ["", "Jumlah Keseluruhan (RM)", totalPaid], ["Ringgit Malaysia:", numberToWordsMY(totalPaid)], [], ["Kaedah Pembayaran:"],
+                ["Sila buat pembayaran ke akaun bank rasmi persatuan"], ["Nama Bank:", "Maybank"], ["Nama Akaun:", "Persatuan Penduduk Pelangi Seri Alam"],
+                ["No. Akaun:", "5621 0211 9988"], [`Sila masukkan nombor rumah anda (eg., ${paymentRef}) sebagai rujukan pembayaran`], [],
+                ["Terima kasih atas kerjasama dan pembayaran anda."]
+            );
+            
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            ws['!cols'] = [{ wch: 60 }, { wch: 30 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Invois");
+            XLSX.writeFile(wb, `Invois-${resident.ownerName.replace(/ /g, '_')}-${invoiceDate}.xlsx`);
+        }
+        
+        // --- DASHBOARD LOGIC ---
+        function getUniqueStreets() {
+            const streets = residents.map(r => {
+                const parts = r.houseNumber.split(', ');
+                return parts.length > 1 ? parts[1] : null;
+            }).filter(Boolean);
+            return ['Semua', ...new Set(streets)];
+        }
+
+        function renderStreetFilters() {
+            const streets = getUniqueStreets();
+            const container = document.getElementById('street-filter-buttons');
+            container.innerHTML = '';
+            streets.forEach(street => {
+                const button = document.createElement('button');
+                button.innerText = street;
+                button.onclick = () => filterByStreet(street);
+                button.className = `px-4 py-2 text-sm font-medium rounded-full transition ${selectedStreet === street ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+                container.appendChild(button);
+            });
+        }
+
+        function filterByStreet(streetName) {
+            selectedStreet = streetName;
+            renderStreetFilters();
+            renderDashboard();
+        }
+
+        function calculateDashboardStats() {
+            let filteredResidents = residents;
+            if (selectedStreet !== 'Semua') {
+                filteredResidents = residents.filter(r => r.houseNumber.includes(selectedStreet));
+            }
+            const stats = {};
+            months.forEach((month, index) => {
+                const monthKey = `2025-${(index + 1).toString().padStart(2, '0')}`;
+                let paidCount = 0;
+                filteredResidents.forEach(resident => {
+                    if (resident.payments[monthKey] && resident.payments[monthKey].status === 'paid') {
+                        paidCount++;
+                    }
+                });
+                const percentage = filteredResidents.length > 0 ? (paidCount / filteredResidents.length) * 100 : 0;
+                stats[month] = percentage;
+            });
+            return stats;
+        }
+
+        function renderDashboard() {
+            const stats = calculateDashboardStats();
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            if(paymentChart) { paymentChart.destroy(); }
+            paymentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(stats),
+                    datasets: [{
+                        label: '% Kutipan',
+                        data: Object.values(stats),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => value + '%' } } },
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => ` Kutipan: ${context.parsed.y.toFixed(1)}%` } } }
+                }
+            });
+        }
+        
+        // --- CLOCK ---
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kuala_Lumpur' };
+            let timeString = now.toLocaleString('en-US', {
+                ...options,
+                hour12: true
+            });
+             document.getElementById('current-time').innerText = timeString;
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            generateMockData();
+            updateClock();
+            setInterval(updateClock, 1000);
+            switchView('dashboard');
+            console.log("Portal Kutipan Yuran Bulanan PPSA dimulakan.");
+        };
+    </script>
+
+</body>
+</html>
+
