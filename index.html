@@ -30,10 +30,6 @@
     <div id="app" class="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl">
         
         <!-- Header --><header class="bg-white shadow-md rounded-lg p-6 mb-8 relative">
-            <div class="absolute top-4 right-4">
-                <button id="adminLoginBtn" onclick="openLoginModal()" class="bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-gray-800 transition">Log Masuk Admin</button>
-                <button id="logoutBtn" onclick="handleLogout()" class="hidden bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Log Keluar</button>
-            </div>
             <div class="flex justify-center mb-4">
                 <img id="logo" src="https://i.ibb.co/bMNpkTMK/Whats-App-Image-2024-02-28-at-09-29-02-63a8a29f.jpg" alt="Logo Persatuan" class="h-48 w-48 rounded-full object-cover" crossorigin="anonymous">
             </div>
@@ -45,27 +41,33 @@
         </header>
 
         <!-- Main Content --><main class="bg-white shadow-md rounded-lg p-6">
-            <!-- Tabs --><div class="border-b border-gray-200 mb-6">
+            <!-- Tabs --><div class="flex justify-between items-center border-b border-gray-200 mb-6">
                 <nav class="flex space-x-4" aria-label="Tabs">
                     <button id="tab-dashboard" class="px-3 py-2 font-medium text-sm rounded-t-md tab-active" onclick="switchView('dashboard')">Dashboard</button>
                     <button id="tab-carian" class="px-3 py-2 font-medium text-sm rounded-t-md tab" onclick="switchView('carian')">Rekod Bayaran & Resit</button>
                 </nav>
-            </div>
-             <!-- Global Filters -->
-            <div id="global-filters" class="flex justify-end items-end mb-6 space-x-4">
                 <div>
-                    <label for="yearSelector" class="block text-sm font-medium text-gray-700">Pilih Tahun</label>
-                    <select id="yearSelector" onchange="handleFilterChange()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
-                </div>
-                <div>
-                    <label for="monthSelector" class="block text-sm font-medium text-gray-700">Pilih Bulan</label>
-                    <select id="monthSelector" onchange="handleFilterChange()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
+                    <button id="adminLoginBtn" onclick="openLoginModal()" class="bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-gray-800 transition">Log Masuk Admin</button>
+                    <button id="logoutBtn" onclick="handleLogout()" class="hidden bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition">Log Keluar</button>
                 </div>
             </div>
+            
 
 
             <!-- Dashboard View --><div id="view-dashboard">
-                 <h2 class="text-xl font-semibold">Peratusan Kutipan Mengikut Lorong</h2>
+                 <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-semibold">Peratusan Kutipan Mengikut Lorong</h2>
+                    <div class="flex items-end space-x-4">
+                        <div>
+                            <label for="dashboardYearSelector" class="block text-sm font-medium text-gray-700">Pilih Tahun</label>
+                            <select id="dashboardYearSelector" onchange="renderDashboard()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
+                        </div>
+                        <div>
+                            <label for="dashboardMonthSelector" class="block text-sm font-medium text-gray-700">Pilih Bulan</label>
+                            <select id="dashboardMonthSelector" onchange="renderDashboard()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
+                        </div>
+                    </div>
+                </div>
                  <p class="text-gray-500 mb-6">Carta di bawah menunjukkan peratusan kutipan yuran untuk bulan dan tahun yang dipilih.</p>
                 <div class="w-full lg:w-5/6 mx-auto h-96 bg-gray-50 p-4 rounded-lg">
                     <canvas id="paymentChart"></canvas>
@@ -128,7 +130,13 @@
                             </div>
                         </div>
                         <div class="p-6">
-                            <h4 id="payment-modal-title" class="font-semibold text-lg mb-4">Status Bayaran Yuran</h4>
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 id="payment-modal-title" class="font-semibold text-lg">Status Bayaran Yuran</h4>
+                                <div class="flex items-center space-x-2">
+                                    <label for="modalYearSelector" class="text-sm font-medium text-gray-700">Tahun:</label>
+                                    <select id="modalYearSelector" onchange="handleModalYearChange()" class="p-1 border border-gray-300 rounded-lg bg-white"></select>
+                                </div>
+                            </div>
                              <p id="admin-mode-notice" class="hidden text-sm text-center bg-yellow-100 text-yellow-800 p-2 rounded-md mb-4">Mod Admin: Klik pada mana-mana bulan untuk menukar status bayaran.</p>
                             <div id="monthlyPayments" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                 <!-- Monthly payment statuses will be populated here --></div>
@@ -322,6 +330,7 @@
             const dashboardView = document.getElementById('view-dashboard');
             const tabCarian = document.getElementById('tab-carian');
             const tabDashboard = document.getElementById('tab-dashboard');
+            const dashboardFilters = document.querySelector('#view-dashboard > .flex');
             
             const searchInput = document.getElementById('searchInput');
             const passwordContainer = document.getElementById('resident-password-container');
@@ -343,12 +352,14 @@
                 dashboardView.classList.remove('hidden');
                 tabCarian.classList.remove('tab-active');
                 tabDashboard.classList.add('tab-active');
+                dashboardFilters.style.display = 'flex';
                 renderDashboard();
             } else { // 'carian' view
                 carianView.classList.remove('hidden');
                 dashboardView.classList.add('hidden');
                 tabDashboard.classList.remove('tab-active');
                 tabCarian.classList.add('tab-active');
+                dashboardFilters.style.display = 'none';
 
                 if (isAdminLoggedIn) {
                     residentPrompt.classList.add('hidden');
@@ -492,17 +503,30 @@
             const resident = residents.find(r => r.id === residentId);
             if (!resident) return;
 
-            const selectedYear = document.getElementById('yearSelector').value;
             document.getElementById('modalOwnerName').innerText = resident.ownerName;
             document.getElementById('modalHouseNumber').innerText = resident.houseNumber;
-            document.getElementById('payment-modal-title').innerText = `Status Bayaran Yuran ${selectedYear}`;
             
             document.getElementById('payment-footer').style.display = isAdminLoggedIn ? 'none' : 'flex';
             document.getElementById('admin-mode-notice').style.display = isAdminLoggedIn ? 'block' : 'none';
 
+            renderModalYearSelector();
+            const selectedYear = document.getElementById('modalYearSelector').value;
+            updateModalContent(resident, selectedYear);
+            
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function handleModalYearChange() {
+            const resident = residents.find(r => r.id === selectedResidentId);
+            const selectedYear = document.getElementById('modalYearSelector').value;
+            updateModalContent(resident, selectedYear);
+        }
+
+        function updateModalContent(resident, selectedYear) {
+            document.getElementById('payment-modal-title').innerText = `Status Bayaran Yuran ${selectedYear}`;
             const monthlyPaymentsContainer = document.getElementById('monthlyPayments');
             monthlyPaymentsContainer.innerHTML = '';
-
+            
             months.forEach((month, index) => {
                 const monthKey = `${selectedYear}-${(index + 1).toString().padStart(2, '0')}`;
                 const paymentInfo = resident.payments[monthKey] || { status: 'unpaid' };
@@ -540,9 +564,7 @@
                 paymentDiv.innerHTML = content;
                 monthlyPaymentsContainer.appendChild(paymentDiv);
             });
-            
             updateTotalSelected();
-            document.getElementById('paymentModal').classList.remove('hidden');
         }
 
         function adminTogglePaymentStatus(residentId, monthKey) {
@@ -857,11 +879,11 @@
             return ['Semua', ...new Set(streets)];
         }
         
-        function renderMonthSelector() {
-            const selector = document.getElementById('monthSelector');
-            if (selector.options.length > 0) return; // Don't re-render if already populated
+        function renderMonthSelector(selectorId = 'dashboardMonthSelector') {
+            const selector = document.getElementById(selectorId);
+            if (!selector || selector.options.length > 0) return;
             
-            const currentMonthIndex = new Date().getMonth(); // Default to current month
+            const currentMonthIndex = new Date().getMonth(); 
             months.forEach((month, index) => {
                 const option = document.createElement('option');
                 option.value = index;
@@ -873,26 +895,45 @@
             });
         }
         
-        function renderYearSelector() {
-            const selector = document.getElementById('yearSelector');
-            if (selector.options.length > 0) return;
+        function renderYearSelector(selectorId = 'dashboardYearSelector') {
+            const selector = document.getElementById(selectorId);
+            if (!selector || selector.options.length > 0) return;
             
             const currentYear = new Date().getFullYear();
             for (let year = 2024; year <= currentYear + 1; year++) { 
                  const option = document.createElement('option');
                  option.value = year;
                  option.innerText = year;
-                 if (year === 2025) { // Default for demo data
+                 if (year === 2025) { 
                     option.selected = true;
                  }
                  selector.appendChild(option);
             }
         }
         
+        function renderModalYearSelector() {
+            const selector = document.getElementById('modalYearSelector');
+            if(!selector) return;
+            selector.innerHTML = '';
+            const mainYearSelector = document.getElementById('yearSelector');
+            const defaultYear = mainYearSelector ? mainYearSelector.value : new Date().getFullYear();
+            
+            const currentYear = new Date().getFullYear();
+            for (let year = 2024; year <= currentYear + 1; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.innerText = year;
+                if (year == defaultYear) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            }
+        }
+        
         function calculateStreetSummaryStats(selectedYear, selectedMonthIndex) {
             const currentMonthKey = `${selectedYear}-${(parseInt(selectedMonthIndex, 10) + 1).toString().padStart(2, '0')}`;
             
-            const streets = getUniqueStreets().filter(s => s !== 'Semua'); // Get all individual streets
+            const streets = getUniqueStreets().filter(s => s !== 'Semua');
             
             const labels = [];
             const percentageData = [];
@@ -904,7 +945,7 @@
                 const totalCount = streetResidents.length;
                 const paidCount = streetResidents.filter(r => r.payments[currentMonthKey] && r.payments[currentMonthKey].status === 'paid').length;
                 
-                labels.push(street.replace('Lorong Lautan Samudera ', 'LLS ')); // Abbreviate for chart
+                labels.push(street.replace('Lorong Lautan Samudera ', 'LLS '));
                 totalData.push(totalCount);
                 paidData.push(paidCount);
                 percentageData.push(totalCount > 0 ? (paidCount / totalCount) * 100 : 0);
@@ -914,8 +955,8 @@
         }
 
         function renderDashboard() {
-            const selectedYear = document.getElementById('yearSelector').value;
-            const selectedMonthIndex = document.getElementById('monthSelector').value;
+            const selectedYear = document.getElementById('dashboardYearSelector').value;
+            const selectedMonthIndex = document.getElementById('dashboardMonthSelector').value;
             const { labels, percentageData, paidData, totalData } = calculateStreetSummaryStats(selectedYear, selectedMonthIndex);
             
             const ctx = document.getElementById('paymentChart').getContext('2d');
@@ -929,8 +970,8 @@
                         {
                             label: 'Peratusan Kutipan',
                             data: percentageData,
-                            backgroundColor: 'rgba(59, 130, 246, 0.8)', // blue-500
-                            borderColor: 'rgba(37, 99, 235, 1)',   // blue-600
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(37, 99, 235, 1)',
                             borderWidth: 1,
                             borderRadius: 5,
                             barPercentage: 0.5,
@@ -994,8 +1035,8 @@
             generateMockData();
             updateClock();
             setInterval(updateClock, 1000);
-            renderMonthSelector();
-            renderYearSelector();
+            renderMonthSelector('dashboardMonthSelector');
+            renderYearSelector('dashboardYearSelector');
             switchView('dashboard');
             console.log("Portal Kutipan Yuran Bulanan PPSA dimulakan.");
         };
