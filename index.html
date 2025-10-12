@@ -51,14 +51,23 @@
                     <button id="tab-carian" class="px-3 py-2 font-medium text-sm rounded-t-md tab" onclick="switchView('carian')">Rekod Bayaran & Resit</button>
                 </nav>
             </div>
+             <!-- Global Filters -->
+            <div id="global-filters" class="flex justify-end items-end mb-6 space-x-4">
+                <div>
+                    <label for="yearSelector" class="block text-sm font-medium text-gray-700">Pilih Tahun</label>
+                    <select id="yearSelector" onchange="handleFilterChange()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
+                </div>
+                <div>
+                    <label for="monthSelector" class="block text-sm font-medium text-gray-700">Pilih Bulan</label>
+                    <select id="monthSelector" onchange="handleFilterChange()" class="mt-1 p-2 border border-gray-300 rounded-lg bg-white"></select>
+                </div>
+            </div>
+
 
             <!-- Dashboard View --><div id="view-dashboard">
-                 <h2 class="text-xl font-semibold mb-4">Peratusan Kutipan Yuran Bulanan 2025</h2>
-                 <p class="text-gray-500 mb-6">Carta di bawah menunjukkan peratusan penduduk yang telah membuat bayaran yuran untuk setiap bulan. Pilih jalan untuk melihat data yang lebih terperinci.</p>
-                <div id="street-filter-buttons" class="flex flex-wrap gap-2 mb-6">
-                    <!-- Street filter buttons will be generated here -->
-                </div>
-                <div class="w-full h-96 bg-gray-50 p-4 rounded-lg">
+                 <h2 class="text-xl font-semibold">Peratusan Kutipan Mengikut Lorong</h2>
+                 <p class="text-gray-500 mb-6">Carta di bawah menunjukkan peratusan kutipan yuran untuk bulan dan tahun yang dipilih.</p>
+                <div class="w-full lg:w-5/6 mx-auto h-96 bg-gray-50 p-4 rounded-lg">
                     <canvas id="paymentChart"></canvas>
                 </div>
             </div>
@@ -68,7 +77,7 @@
                     <!-- This part is for the resident view prompt -->
                     <div id="resident-prompt" class="max-w-xl mx-auto text-center">
                         <h2 class="text-xl font-semibold mb-2">Semak Rekod Bayaran Anda</h2>
-                        <p class="text-gray-500 mb-6">Sila masukkan nama atau nombor rumah dan kata laluan untuk melihat rekod anda.</p>
+                        <p class="text-gray-500 mb-6">Sila masukkan nombor rumah dan kata laluan untuk melihat rekod anda.</p>
                     </div>
                      <!-- This is for the admin view prompt -->
                     <div id="admin-prompt" class="hidden mb-6">
@@ -80,8 +89,8 @@
                     <div class="max-w-xl" id="form-controls">
                          <div class="space-y-4">
                             <div>
-                                <label for="searchInput" class="block text-sm font-medium text-gray-700">Nama Pemilik / No. Rumah</label>
-                                <input type="text" id="searchInput" placeholder="Cth: Ahmad Faizal atau 1..." class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                <label for="searchInput" class="block text-sm font-medium text-gray-700">No. Rumah</label>
+                                <input type="text" id="searchInput" placeholder="Cth: 45..." class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                             </div>
                             <div id="resident-password-container">
                                 <label for="residentPassword" class="block text-sm font-medium text-gray-700">Kata Laluan</label>
@@ -119,7 +128,7 @@
                             </div>
                         </div>
                         <div class="p-6">
-                            <h4 class="font-semibold text-lg mb-4">Status Bayaran Yuran 2025</h4>
+                            <h4 id="payment-modal-title" class="font-semibold text-lg mb-4">Status Bayaran Yuran</h4>
                              <p id="admin-mode-notice" class="hidden text-sm text-center bg-yellow-100 text-yellow-800 p-2 rounded-md mb-4">Mod Admin: Klik pada mana-mana bulan untuk menukar status bayaran.</p>
                             <div id="monthlyPayments" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                 <!-- Monthly payment statuses will be populated here --></div>
@@ -269,17 +278,20 @@
 
             for (let i = 1; i <= 96; i++) {
                 const payments = {};
-                months.forEach((month, index) => {
-                    const monthKey = `2025-${(index + 1).toString().padStart(2, '0')}`;
-                    if (Math.random() < 0.7) { // 70% chance of being paid
-                        payments[monthKey] = {
-                            status: 'paid',
-                            date: `2025-${(index + 1).toString().padStart(2, '0')}-${(Math.floor(Math.random() * 28) + 1).toString().padStart(2, '0')}`,
-                            mode: paymentModes[Math.floor(Math.random() * paymentModes.length)]
-                        };
-                    } else {
-                        payments[monthKey] = { status: 'unpaid' };
-                    }
+                const years = [2024, 2025];
+                years.forEach(year => {
+                    months.forEach((month, index) => {
+                        const monthKey = `${year}-${(index + 1).toString().padStart(2, '0')}`;
+                        if (Math.random() < 0.7) { // 70% chance of being paid
+                            payments[monthKey] = {
+                                status: 'paid',
+                                date: `${year}-${(index + 1).toString().padStart(2, '0')}-${(Math.floor(Math.random() * 28) + 1).toString().padStart(2, '0')}`,
+                                mode: paymentModes[Math.floor(Math.random() * paymentModes.length)]
+                            };
+                        } else {
+                            payments[monthKey] = { status: 'unpaid' };
+                        }
+                    });
                 });
 
                 let streetName = '';
@@ -331,7 +343,6 @@
                 dashboardView.classList.remove('hidden');
                 tabCarian.classList.remove('tab-active');
                 tabDashboard.classList.add('tab-active');
-                renderStreetFilters();
                 renderDashboard();
             } else { // 'carian' view
                 carianView.classList.remove('hidden');
@@ -481,8 +492,10 @@
             const resident = residents.find(r => r.id === residentId);
             if (!resident) return;
 
+            const selectedYear = document.getElementById('yearSelector').value;
             document.getElementById('modalOwnerName').innerText = resident.ownerName;
             document.getElementById('modalHouseNumber').innerText = resident.houseNumber;
+            document.getElementById('payment-modal-title').innerText = `Status Bayaran Yuran ${selectedYear}`;
             
             document.getElementById('payment-footer').style.display = isAdminLoggedIn ? 'none' : 'flex';
             document.getElementById('admin-mode-notice').style.display = isAdminLoggedIn ? 'block' : 'none';
@@ -490,16 +503,17 @@
             const monthlyPaymentsContainer = document.getElementById('monthlyPayments');
             monthlyPaymentsContainer.innerHTML = '';
 
-            Object.entries(resident.payments).forEach(([monthKey, paymentInfo]) => {
+            months.forEach((month, index) => {
+                const monthKey = `${selectedYear}-${(index + 1).toString().padStart(2, '0')}`;
+                const paymentInfo = resident.payments[monthKey] || { status: 'unpaid' };
                 const isPaid = paymentInfo.status === 'paid';
-                const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
                 const paymentDiv = document.createElement('div');
                 
                 paymentDiv.className = `p-3 rounded-lg border-2 text-center transition ${isPaid ? 'bg-green-100 border-green-300' : 'bg-white border-gray-300'}`;
                 paymentDiv.dataset.monthKey = monthKey;
 
                 let content = `
-                    <p class="font-semibold">${monthName}</p>
+                    <p class="font-semibold">${month}</p>
                     <p class="text-sm ${isPaid ? 'text-green-700' : 'text-red-700'}">${isPaid ? 'Sudah Bayar' : 'Belum Bayar'}</p>
                 `;
 
@@ -535,10 +549,15 @@
             const resident = residents.find(r => r.id === residentId);
             if (!resident) return;
 
-            if (resident.payments[monthKey].status === 'paid') {
+            if (resident.payments[monthKey] && resident.payments[monthKey].status === 'paid') {
                 resident.payments[monthKey] = { status: 'unpaid' };
             } else {
-                resident.payments[monthKey] = { status: 'paid', date: null, mode: null };
+                 if (!resident.payments[monthKey]) {
+                    resident.payments[monthKey] = {};
+                }
+                resident.payments[monthKey].status = 'paid';
+                resident.payments[monthKey].date = null;
+                resident.payments[monthKey].mode = null;
             }
             
             openModal(residentId);
@@ -547,11 +566,12 @@
         function openAdminDetailsModal(residentId, monthKey) {
             const resident = residents.find(r => r.id === residentId);
             const paymentInfo = resident.payments[monthKey];
+            const year = monthKey.split('-')[0];
             const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
             
             document.getElementById('adminDetailsResidentId').value = residentId;
             document.getElementById('adminDetailsMonthKey').value = monthKey;
-            document.getElementById('adminDetailsMonth').innerText = `Untuk Bulan: ${monthName}`;
+            document.getElementById('adminDetailsMonth').innerText = `Untuk Bulan: ${monthName} ${year}`;
             
             document.getElementById('paymentDate').value = paymentInfo.date || '';
             document.getElementById('paymentMode').value = paymentInfo.mode || 'Online';
@@ -582,7 +602,7 @@
             };
             
             const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
-            const paidMonthInfo = [{ name: monthName, amount: feePerMonth, date: paymentDate, mode: paymentMode }];
+            const paidMonthInfo = [{ name: monthName, amount: feePerMonth, date: paymentDate, mode: paymentMode, year: monthKey.split('-')[0] }];
 
             closeAdminDetailsModal();
             openModal(residentId); // Refresh payment modal
@@ -636,9 +656,10 @@
             const today = new Date().toISOString().split('T')[0];
             selectedElements.forEach(el => {
                 const monthKey = el.dataset.monthKey;
+                const year = monthKey.split('-')[0];
                 resident.payments[monthKey] = { status: 'paid', date: today, mode: 'Online'}; // Default for resident payment
                 const monthName = el.querySelector('.font-semibold').innerText;
-                paidMonthsInfo.push({ name: monthName, amount: feePerMonth, date: today, mode: 'Online' });
+                paidMonthsInfo.push({ name: monthName, amount: feePerMonth, date: today, mode: 'Online', year: year });
             });
             
             closeModal();
@@ -755,7 +776,7 @@
             const tableColumn = ["Perkara", "Jumlah (RM)"];
             const tableRows = [];
             paidMonthsInfo.forEach(item => {
-                tableRows.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} 2025`, item.amount.toFixed(2)]);
+                tableRows.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`, item.amount.toFixed(2)]);
             });
 
             autoTable(doc, {
@@ -811,7 +832,7 @@
             ws_data.push([], ["Perkara", "Jumlah (RM)"]);
 
             paidMonthsInfo.forEach(item => {
-                ws_data.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} 2025`, item.amount]);
+                ws_data.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`, item.amount]);
             });
 
             ws_data.push([], ["", "Jumlah Keseluruhan (RM)", totalPaid], ["Ringgit Malaysia:", numberToWordsMY(totalPaid)], [], ["Kaedah Pembayaran:"],
@@ -835,70 +856,126 @@
             }).filter(Boolean);
             return ['Semua', ...new Set(streets)];
         }
-
-        function renderStreetFilters() {
-            const streets = getUniqueStreets();
-            const container = document.getElementById('street-filter-buttons');
-            container.innerHTML = '';
-            streets.forEach(street => {
-                const button = document.createElement('button');
-                button.innerText = street;
-                button.onclick = () => filterByStreet(street);
-                button.className = `px-4 py-2 text-sm font-medium rounded-full transition ${selectedStreet === street ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
-                container.appendChild(button);
-            });
-        }
-
-        function filterByStreet(streetName) {
-            selectedStreet = streetName;
-            renderStreetFilters();
-            renderDashboard();
-        }
-
-        function calculateDashboardStats() {
-            let filteredResidents = residents;
-            if (selectedStreet !== 'Semua') {
-                filteredResidents = residents.filter(r => r.houseNumber.includes(selectedStreet));
-            }
-            const stats = {};
+        
+        function renderMonthSelector() {
+            const selector = document.getElementById('monthSelector');
+            if (selector.options.length > 0) return; // Don't re-render if already populated
+            
+            const currentMonthIndex = new Date().getMonth(); // Default to current month
             months.forEach((month, index) => {
-                const monthKey = `2025-${(index + 1).toString().padStart(2, '0')}`;
-                let paidCount = 0;
-                filteredResidents.forEach(resident => {
-                    if (resident.payments[monthKey] && resident.payments[monthKey].status === 'paid') {
-                        paidCount++;
-                    }
-                });
-                const percentage = filteredResidents.length > 0 ? (paidCount / filteredResidents.length) * 100 : 0;
-                stats[month] = percentage;
+                const option = document.createElement('option');
+                option.value = index;
+                option.innerText = month;
+                if (index === currentMonthIndex) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
             });
-            return stats;
+        }
+        
+        function renderYearSelector() {
+            const selector = document.getElementById('yearSelector');
+            if (selector.options.length > 0) return;
+            
+            const currentYear = new Date().getFullYear();
+            for (let year = 2024; year <= currentYear + 1; year++) { 
+                 const option = document.createElement('option');
+                 option.value = year;
+                 option.innerText = year;
+                 if (year === 2025) { // Default for demo data
+                    option.selected = true;
+                 }
+                 selector.appendChild(option);
+            }
+        }
+        
+        function calculateStreetSummaryStats(selectedYear, selectedMonthIndex) {
+            const currentMonthKey = `${selectedYear}-${(parseInt(selectedMonthIndex, 10) + 1).toString().padStart(2, '0')}`;
+            
+            const streets = getUniqueStreets().filter(s => s !== 'Semua'); // Get all individual streets
+            
+            const labels = [];
+            const percentageData = [];
+            const paidData = [];
+            const totalData = [];
+
+            streets.forEach(street => {
+                const streetResidents = residents.filter(r => r.houseNumber.includes(street));
+                const totalCount = streetResidents.length;
+                const paidCount = streetResidents.filter(r => r.payments[currentMonthKey] && r.payments[currentMonthKey].status === 'paid').length;
+                
+                labels.push(street.replace('Lorong Lautan Samudera ', 'LLS ')); // Abbreviate for chart
+                totalData.push(totalCount);
+                paidData.push(paidCount);
+                percentageData.push(totalCount > 0 ? (paidCount / totalCount) * 100 : 0);
+            });
+            
+            return { labels, percentageData, paidData, totalData };
         }
 
         function renderDashboard() {
-            const stats = calculateDashboardStats();
+            const selectedYear = document.getElementById('yearSelector').value;
+            const selectedMonthIndex = document.getElementById('monthSelector').value;
+            const { labels, percentageData, paidData, totalData } = calculateStreetSummaryStats(selectedYear, selectedMonthIndex);
+            
             const ctx = document.getElementById('paymentChart').getContext('2d');
             if(paymentChart) { paymentChart.destroy(); }
+
             paymentChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(stats),
-                    datasets: [{
-                        label: '% Kutipan',
-                        data: Object.values(stats),
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1,
-                        borderRadius: 5,
-                    }]
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Peratusan Kutipan',
+                            data: percentageData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)', // blue-500
+                            borderColor: 'rgba(37, 99, 235, 1)',   // blue-600
+                            borderWidth: 1,
+                            borderRadius: 5,
+                            barPercentage: 0.5,
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (value) => value + '%' } } },
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => ` Kutipan: ${context.parsed.y.toFixed(1)}%` } } }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Peratusan (%)'
+                            },
+                            ticks: {
+                                callback: (value) => value + '%'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const percentage = context.parsed.y.toFixed(1);
+                                    const paid = paidData[index];
+                                    const total = totalData[index];
+                                    return `Kutipan: ${percentage}% (${paid}/${total} penduduk)`;
+                                }
+                            }
+                        }
+                    }
                 }
             });
+        }
+        
+        function handleFilterChange() {
+            const activeTab = document.querySelector('.tab-active').id;
+            if (activeTab === 'tab-dashboard') {
+                renderDashboard();
+            }
         }
         
         // --- CLOCK ---
@@ -917,6 +994,8 @@
             generateMockData();
             updateClock();
             setInterval(updateClock, 1000);
+            renderMonthSelector();
+            renderYearSelector();
             switchView('dashboard');
             console.log("Portal Kutipan Yuran Bulanan PPSA dimulakan.");
         };
