@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Kutipan Yuran Bulanan PPSA - Persatuan Penduduk Pelangi Seri Alam</title>
+    <title>Portal Kutipan Yuran Bulanan PPPSA - Persatuan Penduduk Pelangi Seri Alam</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -34,7 +34,7 @@
                 <img id="logo" src="https://i.ibb.co/bMNpkTMK/Whats-App-Image-2024-02-28-at-09-29-02-63a8a29f.jpg" alt="Logo Persatuan" class="h-48 w-48 rounded-full object-cover" crossorigin="anonymous">
             </div>
             <div class="text-center">
-                <h1 class="text-2xl sm:text-3xl font-bold text-blue-600">Portal Kutipan Yuran Bulanan PPSA</h1>
+                <h1 class="text-2xl sm:text-3xl font-bold text-blue-600">Portal Kutipan Yuran Bulanan PPPSA</h1>
                 <p class="text-md text-gray-500">Persatuan Penduduk Pelangi Seri Alam</p>
                 <div id="current-time" class="text-sm text-gray-500 mt-2"></div>
             </div>
@@ -210,20 +210,36 @@
                             <h3 class="text-xl font-bold">Masukkan Maklumat Bayaran</h3>
                             <p id="adminDetailsMonth" class="text-sm text-gray-500"></p>
                         </div>
-                        <div class="p-6">
+                        <div class="p-6 space-y-4">
                             <input type="hidden" id="adminDetailsResidentId">
                             <input type="hidden" id="adminDetailsMonthKey">
-                            <div class="mb-4">
+                            <div>
                                 <label for="paymentDate" class="block text-sm font-medium text-gray-700 mb-1">Tarikh Bayaran</label>
                                 <input type="date" id="paymentDate" class="w-full p-2 border border-gray-300 rounded-lg">
                             </div>
-                            <div class="mb-4">
+                            <div>
+                                <label for="paymentAmount" class="block text-sm font-medium text-gray-700 mb-1">Amaun (RM)</label>
+                                <input type="number" id="paymentAmount" step="0.01" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
                                 <label for="paymentMode" class="block text-sm font-medium text-gray-700 mb-1">Mod Pembayaran</label>
                                 <select id="paymentMode" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
                                     <option value="Online">Online</option>
                                     <option value="Cash">Cash</option>
                                     <option value="QR Code">QR Code</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label for="paymentBank" class="block text-sm font-medium text-gray-700 mb-1">Bank</label>
+                                <input type="text" id="paymentBank" placeholder="Cth: Maybank" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label for="paymentRefNo" class="block text-sm font-medium text-gray-700 mb-1">No. Rujukan</label>
+                                <input type="text" id="paymentRefNo" placeholder="Cth: MBB123456" class="w-full p-2 border border-gray-300 rounded-lg">
+                            </div>
+                             <div>
+                                <label for="paymentRefNote" class="block text-sm font-medium text-gray-700 mb-1">Rujukan / Nota</label>
+                                <input type="text" id="paymentRefNote" placeholder="Cth: Bayaran lewat" class="w-full p-2 border border-gray-300 rounded-lg">
                             </div>
                             <button onclick="handleAdminReceiptGeneration()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Sahkan & Jana Resit</button>
                         </div>
@@ -312,7 +328,11 @@
                             payments[monthKey] = {
                                 status: 'paid',
                                 date: `${year}-${(index + 1).toString().padStart(2, '0')}-${(Math.floor(Math.random() * 28) + 1).toString().padStart(2, '0')}`,
-                                mode: paymentModes[Math.floor(Math.random() * paymentModes.length)]
+                                mode: paymentModes[Math.floor(Math.random() * paymentModes.length)],
+                                amount: feePerMonth,
+                                bank: 'Maybank',
+                                refNo: `MBB${Math.floor(Math.random() * 90000)}`,
+                                refNote: 'Bayaran Awal'
                             };
                         } else {
                             payments[monthKey] = { status: 'unpaid' };
@@ -627,6 +647,10 @@
                 resident.payments[monthKey].status = 'paid';
                 resident.payments[monthKey].date = null;
                 resident.payments[monthKey].mode = null;
+                resident.payments[monthKey].amount = feePerMonth;
+                resident.payments[monthKey].bank = null;
+                resident.payments[monthKey].refNo = null;
+                resident.payments[monthKey].refNote = null;
             }
             
             openModal(residentId);
@@ -643,7 +667,11 @@
             document.getElementById('adminDetailsMonth').innerText = `Untuk Bulan: ${monthName} ${year}`;
             
             document.getElementById('paymentDate').value = paymentInfo.date || '';
+            document.getElementById('paymentAmount').value = paymentInfo.amount || feePerMonth;
             document.getElementById('paymentMode').value = paymentInfo.mode || 'Online';
+            document.getElementById('paymentBank').value = paymentInfo.bank || '';
+            document.getElementById('paymentRefNo').value = paymentInfo.refNo || '';
+            document.getElementById('paymentRefNote').value = paymentInfo.refNote || '';
             
             document.getElementById('adminPaymentDetailsModal').classList.remove('hidden');
         }
@@ -656,10 +684,14 @@
             const residentId = document.getElementById('adminDetailsResidentId').value;
             const monthKey = document.getElementById('adminDetailsMonthKey').value;
             const paymentDate = document.getElementById('paymentDate').value;
+            const paymentAmount = document.getElementById('paymentAmount').value;
             const paymentMode = document.getElementById('paymentMode').value;
+            const paymentBank = document.getElementById('paymentBank').value;
+            const paymentRefNo = document.getElementById('paymentRefNo').value;
+            const paymentRefNote = document.getElementById('paymentRefNote').value;
             
-            if (!paymentDate) {
-                alert('Sila masukkan tarikh bayaran.');
+            if (!paymentDate || !paymentAmount) {
+                alert('Sila masukkan tarikh bayaran dan amaun.');
                 return;
             }
 
@@ -667,11 +699,24 @@
             resident.payments[monthKey] = {
                 status: 'paid',
                 date: paymentDate,
-                mode: paymentMode
+                mode: paymentMode,
+                amount: parseFloat(paymentAmount),
+                bank: paymentBank,
+                refNo: paymentRefNo,
+                refNote: paymentRefNote
             };
             
             const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
-            const paidMonthInfo = [{ name: monthName, amount: feePerMonth, date: paymentDate, mode: paymentMode, year: monthKey.split('-')[0] }];
+            const paidMonthInfo = [{ 
+                name: monthName, 
+                amount: parseFloat(paymentAmount), 
+                date: paymentDate, 
+                mode: paymentMode, 
+                year: monthKey.split('-')[0],
+                bank: paymentBank,
+                refNo: paymentRefNo,
+                refNote: paymentRefNote
+            }];
 
             closeAdminDetailsModal();
             openModal(residentId); // Refresh payment modal
@@ -726,9 +771,26 @@
             selectedElements.forEach(el => {
                 const monthKey = el.dataset.monthKey;
                 const year = monthKey.split('-')[0];
-                resident.payments[monthKey] = { status: 'paid', date: today, mode: 'Online'}; // Default for resident payment
+                resident.payments[monthKey] = { 
+                    status: 'paid', 
+                    date: today, 
+                    mode: 'Online', 
+                    amount: feePerMonth, 
+                    bank: 'N/A', 
+                    refNo: 'N/A', 
+                    refNote: 'Bayaran Portal'
+                };
                 const monthName = el.querySelector('.font-semibold').innerText;
-                paidMonthsInfo.push({ name: monthName, amount: feePerMonth, date: today, mode: 'Online', year: year });
+                paidMonthsInfo.push({ 
+                    name: monthName, 
+                    amount: feePerMonth, 
+                    date: today, 
+                    mode: 'Online', 
+                    year: year,
+                    bank: 'N/A', 
+                    refNo: 'N/A', 
+                    refNote: 'Bayaran Portal'
+                });
             });
             
             closeModal();
@@ -765,24 +827,44 @@
         // --- INVOICE GENERATION ---
         
         function numberToWordsMY(num) {
+            num = parseFloat(num);
             const units = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Lapan", "Sembilan"];
             const teens = ["Sepuluh", "Sebelas", "Dua Belas", "Tiga Belas", "Empat Belas", "Lima Belas", "Enam Belas", "Tujuh Belas", "Lapan Belas", "Sembilan Belas"];
             const tens = ["", "", "Dua Puluh", "Tiga Puluh", "Empat Puluh", "Lima Puluh", "Enam Puluh", "Tujuh Puluh", "Lapan Puluh", "Sembilan Puluh"];
             
             if (num === 0) return "Kosong";
+            
+            let ringgit = Math.floor(num);
+            let sen = Math.round((num - ringgit) * 100);
+            
             let words = "";
-            if (Math.floor(num / 100) > 0) {
-                words += (Math.floor(num / 100) === 1 ? "Seratus" : units[Math.floor(num / 100)] + " Ratus") + " ";
-                num %= 100;
-            }
-            if (num > 0) {
-                if (num < 10) { words += units[num]; } 
-                else if (num < 20) { words += teens[num - 10]; } 
-                else {
-                    words += tens[Math.floor(num / 10)];
-                    if (num % 10 > 0) { words += " " + units[num % 10]; }
+
+            function convert(n) {
+                let str = "";
+                if (Math.floor(n / 100) > 0) {
+                    str += (Math.floor(n / 100) === 1 ? "Seratus" : units[Math.floor(n / 100)] + " Ratus") + " ";
+                    n %= 100;
                 }
+                if (n > 0) {
+                    if (n < 10) { str += units[n]; } 
+                    else if (n < 20) { str += teens[n - 10]; } 
+                    else {
+                        str += tens[Math.floor(n / 10)];
+                        if (n % 10 > 0) { str += " " + units[n % 10]; }
+                    }
+                }
+                return str.trim();
             }
+
+            if (ringgit > 0) {
+                words += convert(ringgit) + " Ringgit";
+            }
+            
+            if (sen > 0) {
+                if (ringgit > 0) { words += " Dan "; }
+                words += convert(sen) + " Sen";
+            }
+            
             return words.trim() + " Sahaja";
         }
 
@@ -836,16 +918,34 @@
             doc.text(`Tarikh: ${invoiceDate}`, 205, 70, { align: 'right' });
 
             const paymentDetails = paidMonthsInfo[0]; // Assuming one or more months paid on the same day/mode
-            if(paymentDetails.date && paymentDetails.mode) {
-                doc.text(`Tarikh Bayaran: ${new Date(paymentDetails.date).toLocaleDateString('ms-MY')}`, 205, 75, { align: 'right' });
-                doc.text(`Mod Bayaran: ${paymentDetails.mode}`, 205, 80, { align: 'right' });
+            let currentY = 70;
+            
+            if(paymentDetails.date) {
+                currentY += 5;
+                doc.text(`Tarikh Bayaran: ${new Date(paymentDetails.date).toLocaleDateString('ms-MY')}`, 205, currentY, { align: 'right' });
+            }
+             if(paymentDetails.mode) {
+                currentY += 5;
+                doc.text(`Mod Bayaran: ${paymentDetails.mode}`, 205, currentY, { align: 'right' });
+            }
+            if(paymentDetails.bank) {
+                currentY += 5;
+                doc.text(`Bank: ${paymentDetails.bank}`, 205, currentY, { align: 'right' });
+            }
+            if(paymentDetails.refNo) {
+                currentY += 5;
+                doc.text(`No. Rujukan: ${paymentDetails.refNo}`, 205, currentY, { align: 'right' });
             }
 
 
             const tableColumn = ["Perkara", "Jumlah (RM)"];
             const tableRows = [];
             paidMonthsInfo.forEach(item => {
-                tableRows.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`, item.amount.toFixed(2)]);
+                let description = `Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`;
+                if (item.refNote) {
+                    description += `\n(Rujukan: ${item.refNote})`;
+                }
+                tableRows.push([description, item.amount.toFixed(2)]);
             });
 
             autoTable(doc, {
@@ -893,15 +993,27 @@
                 ["No. Invois:", invoiceId], ["Tarikh:", invoiceDate]
             ];
             
-            if(paymentDetails.date && paymentDetails.mode) {
+            if(paymentDetails.date) {
                  ws_data.push(["Tarikh Bayaran:", new Date(paymentDetails.date).toLocaleDateString('ms-MY')]);
+            }
+            if(paymentDetails.mode) {
                  ws_data.push(["Mod Bayaran:", paymentDetails.mode]);
+            }
+            if(paymentDetails.bank) {
+                 ws_data.push(["Bank:", paymentDetails.bank]);
+            }
+            if(paymentDetails.refNo) {
+                 ws_data.push(["No. Rujukan:", paymentDetails.refNo]);
             }
             
             ws_data.push([], ["Perkara", "Jumlah (RM)"]);
 
             paidMonthsInfo.forEach(item => {
-                ws_data.push([`Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`, item.amount]);
+                let description = `Bayaran Yuran Keselamatan & Penyelenggaraan Bulan ${item.name} ${item.year}`;
+                 if (item.refNote) {
+                    description += ` (Rujukan: ${item.refNote})`;
+                }
+                ws_data.push([description, item.amount]);
             });
 
             ws_data.push([], ["", "Jumlah Keseluruhan (RM)", totalPaid], ["Ringgit Malaysia:", numberToWordsMY(totalPaid)], [], ["Kaedah Pembayaran:"],
@@ -962,15 +1074,13 @@
             const selector = document.getElementById('modalYearSelector');
             if(!selector) return;
             selector.innerHTML = '';
-            const mainYearSelector = document.getElementById('dashboardYearSelector');
-            const defaultYear = mainYearSelector ? mainYearSelector.value : new Date().getFullYear();
             
             const currentYear = new Date().getFullYear();
             for (let year = 2024; year <= currentYear + 1; year++) {
                 const option = document.createElement('option');
                 option.value = year;
                 option.innerText = year;
-                if (year == defaultYear) {
+                if (year === 2025) { // Default to 2025 as it has data
                     option.selected = true;
                 }
                 selector.appendChild(option);
