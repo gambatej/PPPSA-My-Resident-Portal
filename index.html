@@ -307,7 +307,7 @@
     <script>
         // --- CONFIG ---
         // GANTIKAN DENGAN URL GOOGLE APPS SCRIPT ANDA YANG TELAH DI-DEPLOY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwULC0QUmSWEy4xOaWxCRgV9GhEbvZSqqpT9wiOg5XPYM6jjylhkm3w4vLey-YPPXiQaQ/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxazLnBQSlG8IrCTRXCqAwRXrQ_DycE-Hk68z49LId3_cPod1py7eyuDaHXGE_brCty8w/exec"; 
 
         // --- DATA ---
         let residents = [];
@@ -696,25 +696,31 @@
             const resident = residents.find(r => r.id === residentId);
             if (!resident) return;
 
+            let newStatus;
+            let paymentDetails;
+
             if (resident.payments[monthKey] && resident.payments[monthKey].status === 'paid') {
-                resident.payments[monthKey] = { status: 'unpaid' };
+                newStatus = 'unpaid';
+                paymentDetails = { status: 'unpaid' };
             } else {
-                 if (!resident.payments[monthKey]) {
-                    resident.payments[monthKey] = {};
-                }
-                resident.payments[monthKey].status = 'paid';
-                resident.payments[monthKey].date = null;
-                resident.payments[monthKey].mode = null;
-                resident.payments[monthKey].amount = feePerMonth;
-                resident.payments[monthKey].bank = null;
-                resident.payments[monthKey].refNo = null;
-                resident.payments[monthKey].refNote = null;
+                newStatus = 'paid';
+                paymentDetails = { 
+                    status: 'paid', 
+                    date: null, 
+                    mode: null, 
+                    amount: feePerMonth, 
+                    bank: null, 
+                    refNo: null, 
+                    refNote: null 
+                };
             }
             
             // Optimistic update in local data
+            resident.payments[monthKey] = paymentDetails;
             openModal(residentId); 
+            
             // Update Google Sheet in the background
-            updateSheet(resident.ownerName, monthKey, resident.payments[monthKey].status, resident.payments[monthKey]);
+            updateSheet(resident.ownerName, monthKey, newStatus, paymentDetails);
         }
 
         function openAdminDetailsModal(residentId, monthKey) {
@@ -1152,7 +1158,7 @@
             return ['Semua', ...new Set(streets)];
         }
         
-        function renderMonthSelector(selectorId = 'dashboardMonthSelector') {
+        function renderMonthSelector(selectorId) {
             const selector = document.getElementById(selectorId);
             if (!selector || selector.options.length > 0) return;
             
@@ -1168,7 +1174,7 @@
             });
         }
         
-        function renderYearSelector(selectorId = 'dashboardYearSelector') {
+        function renderYearSelector(selectorId) {
             const selector = document.getElementById(selectorId);
             if (!selector || selector.options.length > 0) return;
             
