@@ -23,6 +23,19 @@
         .tab {
             border-bottom-color: transparent;
         }
+         /* Simple spinner for loading state */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, .1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="bg-blue-100 text-gray-800">
@@ -79,7 +92,7 @@
                     <!-- This part is for the resident view prompt -->
                     <div id="resident-prompt" class="max-w-xl mx-auto text-center">
                         <h2 class="text-xl font-semibold mb-2">Semak Rekod Bayaran Anda</h2>
-                        <p class="text-gray-500 mb-6">Sila masukkan nombor rumah dan kata laluan untuk melihat rekod anda.</p>
+                        <p class="text-gray-500 mb-6">Sila pilih lorong, masukkan nombor rumah dan kata laluan untuk melihat rekod anda.</p>
                     </div>
                      <!-- This is for the admin view prompt -->
                     <div id="admin-prompt" class="hidden mb-6">
@@ -90,9 +103,15 @@
                     <!-- This is the actual form, some parts are hidden/shown -->
                     <div class="max-w-xl" id="form-controls">
                          <div class="space-y-4">
+                            <div id="resident-street-container">
+                                <label for="streetSearchSelector" class="block text-sm font-medium text-gray-700">Pilih Lorong</label>
+                                <select id="streetSearchSelector" class="mt-1 w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
                             <div>
-                                <label for="searchInput" class="block text-sm font-medium text-gray-700">No. Rumah</label>
-                                <input type="text" id="searchInput" placeholder="Cth: 45..." class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                <label for="searchInput" class="block text-sm font-medium text-gray-700">No. Rumah / Nama</label>
+                                <input type="text" id="searchInput" placeholder="Cth: 45 atau Ahmad..." class="mt-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                             </div>
                             <div id="resident-password-container">
                                 <label for="residentPassword" class="block text-sm font-medium text-gray-700">Kata Laluan</label>
@@ -241,7 +260,7 @@
                                 <label for="paymentRefNote" class="block text-sm font-medium text-gray-700 mb-1">Rujukan / Nota</label>
                                 <input type="text" id="paymentRefNote" placeholder="Cth: Bayaran lewat" class="w-full p-2 border border-gray-300 rounded-lg">
                             </div>
-                            <button onclick="handleAdminReceiptGeneration()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Sahkan & Jana Resit</button>
+                            <button id="adminReceiptButton" onclick="handleAdminReceiptGeneration()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Sahkan & Jana Resit</button>
                         </div>
                          <div class="p-4 bg-gray-50 text-center rounded-b-lg">
                              <button onclick="closeAdminDetailsModal()" class="text-gray-600 font-medium hover:text-gray-800">Batal</button>
@@ -267,6 +286,14 @@
                     </div>
                 </div>
 
+                <!-- Loading Modal -->
+                <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden z-[60] p-4">
+                    <div class="flex flex-col items-center">
+                        <div class="spinner"></div>
+                        <p class="text-white mt-4">Mengemas kini...</p>
+                    </div>
+                </div>
+
 
             </div>
 
@@ -278,6 +305,10 @@
     </div>
 
     <script>
+        // --- CONFIG ---
+        // GANTIKAN DENGAN URL GOOGLE APPS SCRIPT ANDA YANG TELAH DI-DEPLOY
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwULC0QUmSWEy4xOaWxCRgV9GhEbvZSqqpT9wiOg5XPYM6jjylhkm3w4vLey-YPPXiQaQ/exec"; 
+
         // --- DATA ---
         let residents = [];
         let selectedResidentId = null;
@@ -376,6 +407,7 @@
             const residentPrompt = document.getElementById('resident-prompt');
             const adminPrompt = document.getElementById('admin-prompt');
             const formControls = document.getElementById('form-controls');
+            const streetContainer = document.getElementById('resident-street-container');
 
             document.getElementById('searchResults').innerHTML = '';
             document.getElementById('noResults').classList.add('hidden');
@@ -399,21 +431,27 @@
                 tabCarian.classList.add('tab-active');
                 dashboardFilters.style.display = 'none';
 
+                renderStreetSearchSelector(); // Re-render selector based on login status
+
                 if (isAdminLoggedIn) {
                     residentPrompt.classList.add('hidden');
                     passwordContainer.classList.add('hidden');
                     searchButtonContainer.classList.add('hidden');
                     adminPrompt.classList.remove('hidden');
                     formControls.classList.remove('mx-auto');
+                    streetContainer.classList.remove('hidden');
                     
-                    searchInput.onkeyup = () => searchResidents();
-                    searchResidents(); // Show all residents for admin
+                    searchInput.onkeyup = () => proceedWithSearch();
+                    document.getElementById('streetSearchSelector').onchange = () => proceedWithSearch();
+                    proceedWithSearch(); // Show all residents for admin
                 } else {
                     residentPrompt.classList.remove('hidden');
                     passwordContainer.classList.remove('hidden');
                     searchButtonContainer.classList.remove('hidden');
                     adminPrompt.classList.add('hidden');
                     formControls.classList.add('mx-auto');
+                    streetContainer.classList.remove('hidden');
+                    document.getElementById('streetSearchSelector').onchange = null;
                 }
             }
         }
@@ -485,20 +523,33 @@
             }
             
             const input = document.getElementById('searchInput').value;
+            const selectedStreet = document.getElementById('streetSearchSelector').value;
             const password = document.getElementById('residentPassword').value;
+            const loginError = document.getElementById('residentLoginError');
 
-            if (!input || !password) {
-                 document.getElementById('residentLoginError').innerText = 'Sila isi nombor rumah dan kata laluan.';
-                 document.getElementById('residentLoginError').classList.remove('hidden');
+            if (!selectedStreet) {
+                 loginError.innerText = 'Sila pilih lorong anda.';
+                 loginError.classList.remove('hidden');
                  return;
             }
-            document.getElementById('residentLoginError').classList.add('hidden');
+            if (!input) {
+                 loginError.innerText = 'Sila masukkan nombor rumah anda.';
+                 loginError.classList.remove('hidden');
+                 return;
+            }
+            if (!password) {
+                 loginError.innerText = 'Sila masukkan kata laluan anda.';
+                 loginError.classList.remove('hidden');
+                 return;
+            }
+            loginError.classList.add('hidden');
             
             openResidentNotificationModal();
         }
         
         function proceedWithSearch() {
             const input = document.getElementById('searchInput').value.toLowerCase();
+            const selectedStreet = document.getElementById('streetSearchSelector').value;
             const resultsContainer = document.getElementById('searchResults');
             const noResults = document.getElementById('noResults');
             const loginError = document.getElementById('residentLoginError');
@@ -517,26 +568,33 @@
             }
             loginError.classList.add('hidden');
 
-            let filteredResidents = [];
-            
-            const filterLogic = r => {
-                const ownerName = r.ownerName.toLowerCase();
-                const houseNumberStr = r.houseNumber.toLowerCase();
-                // Extracts house number, e.g., from "no. 1, ..." to "1"
-                const houseNoOnly = houseNumberStr.split(',')[0].replace('no. ', '').trim();
+            let filteredResidents = residents;
 
-                return ownerName.includes(input) || 
-                       houseNumberStr.includes(input) || // Allows searching street name
-                       houseNoOnly.startsWith(input); // Specifically allows searching by number
-            };
-            
-            if (isAdminLoggedIn) {
-                 filteredResidents = residents.filter(filterLogic);
-            } else if (input) {
-                 filteredResidents = residents.filter(filterLogic);
+            // 1. Filter by Street (if selected)
+            if (selectedStreet) {
+                filteredResidents = filteredResidents.filter(r => r.houseNumber.includes(selectedStreet));
             }
 
-            if (filteredResidents.length === 0 && (input || isAdminLoggedIn)) {
+            // 2. Filter by Text Input (House No for resident, House No/Name for Admin)
+            if (input) {
+                const filterLogic = r => {
+                    const ownerName = r.ownerName.toLowerCase();
+                    const houseNumberStr = r.houseNumber.toLowerCase();
+                    const houseNoOnly = houseNumberStr.split(',')[0].replace('no. ', '').trim();
+
+                    if (isAdminLoggedIn) {
+                        // Admin can search by name OR number
+                        return ownerName.includes(input) || houseNoOnly.startsWith(input);
+                    } else {
+                        // Resident search is strictly by number (already filtered by street)
+                        return houseNoOnly.startsWith(input);
+                    }
+                };
+                filteredResidents = filteredResidents.filter(filterLogic);
+            }
+
+
+            if (filteredResidents.length === 0 && (input || selectedStreet || isAdminLoggedIn)) {
                 noResults.classList.remove('hidden');
             } else {
                 noResults.classList.add('hidden');
@@ -653,7 +711,10 @@
                 resident.payments[monthKey].refNote = null;
             }
             
-            openModal(residentId);
+            // Optimistic update in local data
+            openModal(residentId); 
+            // Update Google Sheet in the background
+            updateSheet(resident.ownerName, monthKey, resident.payments[monthKey].status, resident.payments[monthKey]);
         }
 
         function openAdminDetailsModal(residentId, monthKey) {
@@ -680,7 +741,7 @@
             document.getElementById('adminPaymentDetailsModal').classList.add('hidden');
         }
         
-        function handleAdminReceiptGeneration() {
+        async function handleAdminReceiptGeneration() {
             const residentId = document.getElementById('adminDetailsResidentId').value;
             const monthKey = document.getElementById('adminDetailsMonthKey').value;
             const paymentDate = document.getElementById('paymentDate').value;
@@ -696,7 +757,7 @@
             }
 
             const resident = residents.find(r => r.id == residentId);
-            resident.payments[monthKey] = {
+            const paymentDetails = {
                 status: 'paid',
                 date: paymentDate,
                 mode: paymentMode,
@@ -705,6 +766,9 @@
                 refNo: paymentRefNo,
                 refNote: paymentRefNote
             };
+            
+            // Optimistic update
+            resident.payments[monthKey] = paymentDetails;
             
             const monthName = months[parseInt(monthKey.split('-')[1]) - 1];
             const paidMonthInfo = [{ 
@@ -731,12 +795,15 @@
             icon.classList.add('text-blue-600');
             
             showInvoiceModal(resident, paidMonthInfo);
+            
+            // Update Google Sheet in the background
+            updateSheet(resident.ownerName, monthKey, 'paid', paymentDetails);
         }
 
         function closeModal() {
             document.getElementById('paymentModal').classList.add('hidden');
             if (isAdminLoggedIn) {
-                searchResidents();
+                proceedWithSearch(); // Use proceed to avoid password check
             }
             selectedResidentId = null;
         }
@@ -768,10 +835,11 @@
 
             const paidMonthsInfo = [];
             const today = new Date().toISOString().split('T')[0];
+            
             selectedElements.forEach(el => {
                 const monthKey = el.dataset.monthKey;
                 const year = monthKey.split('-')[0];
-                resident.payments[monthKey] = { 
+                const paymentDetails = { 
                     status: 'paid', 
                     date: today, 
                     mode: 'Online', 
@@ -780,6 +848,10 @@
                     refNo: 'N/A', 
                     refNote: 'Bayaran Portal'
                 };
+                
+                // Optimistic local update
+                resident.payments[monthKey] = paymentDetails;
+                
                 const monthName = el.querySelector('.font-semibold').innerText;
                 paidMonthsInfo.push({ 
                     name: monthName, 
@@ -791,10 +863,13 @@
                     refNo: 'N/A', 
                     refNote: 'Bayaran Portal'
                 });
+                
+                // Update Google Sheet in background
+                updateSheet(resident.ownerName, monthKey, 'paid', paymentDetails);
             });
             
             closeModal();
-            searchResidents();
+            proceedWithSearch();
             
             document.getElementById('invoiceModalTitle').innerText = 'Pembayaran Berjaya!';
             document.getElementById('invoiceModalText').innerText = 'Terima kasih. Invois anda telah sedia untuk dimuat turun.';
@@ -822,6 +897,45 @@
             newExcelBtn.onclick = () => generateExcelInvoice(resident, paidMonthsInfo);
 
             modal.classList.remove('hidden');
+        }
+        
+        // --- GOOGLE SCRIPT INTEGRATION ---
+        async function updateSheet(residentName, monthKey, status, details) {
+            if (!SCRIPT_URL) {
+                console.log("SCRIPT_URL belum ditetapkan. Kemas kini data hanya berlaku di dalam portal.");
+                return;
+            }
+            
+            document.getElementById('loadingModal').classList.remove('hidden');
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    cache: 'no-cache',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify({
+                        residentName: residentName,
+                        monthKey: monthKey,
+                        status: status,
+                        details: details
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    console.log('Google Sheet dikemas kini:', result.data);
+                } else {
+                    console.error('Gagal kemas kini Google Sheet:', result.message);
+                }
+            } catch (error) {
+                console.error('Ralat semasa menghubungi Google Sheet:', error);
+            } finally {
+                 document.getElementById('loadingModal').classList.add('hidden');
+            }
         }
         
         // --- INVOICE GENERATION ---
@@ -1085,6 +1199,27 @@
                 }
                 selector.appendChild(option);
             }
+        }
+        
+        function renderStreetSearchSelector() {
+            const selector = document.getElementById('streetSearchSelector');
+            if (!selector) return;
+            selector.innerHTML = ''; // Clear existing options
+            
+            const streets = getUniqueStreets().filter(s => s !== 'Semua'); // Exclude 'Semua'
+
+            if (isAdminLoggedIn) {
+                selector.innerHTML = '<option value="">Semua Lorong</option>';
+            } else {
+                selector.innerHTML = '<option value="">Pilih Lorong...</option>';
+            }
+            
+            streets.forEach(street => {
+                const option = document.createElement('option');
+                option.value = street;
+                option.innerText = street;
+                selector.appendChild(option);
+            });
         }
         
         function calculateStreetSummaryStats(selectedYear, selectedMonthIndex) {
