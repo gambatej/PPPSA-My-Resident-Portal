@@ -307,7 +307,7 @@
     <script>
         // --- CONFIG ---
         // GANTIKAN DENGAN URL GOOGLE APPS SCRIPT ANDA YANG TELAH DI-DEPLOY
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxazLnBQSlG8IrCTRXCqAwRXrQ_DycE-Hk68z49LId3_cPod1py7eyuDaHXGE_brCty8w/exec"; 
+        const SCRIPT_URL = ""; 
 
         // --- DATA ---
         let residents = [];
@@ -1095,7 +1095,7 @@
                     head: [tableColumn], body: tableRows, startY: 90, theme: 'grid', headStyles: { fillColor: [22, 78, 99] }
                 });
                 
-                let finalY = doc.autoTable.previous.finalY;
+                let finalY = doc.lastAutoTable.finalY;
 
                 doc.setFont('helvetica', 'bold');
                 doc.text('Jumlah Keseluruhan (RM)', 150, finalY + 10);
@@ -1369,5 +1369,4 @@
 
 </body>
 </html>
-
 
