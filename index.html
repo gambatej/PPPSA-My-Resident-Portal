@@ -1091,11 +1091,11 @@
                     tableRows.push([description, item.amount.toFixed(2)]);
                 });
 
-                autoTable(doc, {
+                doc.autoTable({
                     head: [tableColumn], body: tableRows, startY: 90, theme: 'grid', headStyles: { fillColor: [22, 78, 99] }
                 });
                 
-                let finalY = doc.lastAutoTable.finalY;
+                let finalY = doc.autoTable.previous.finalY;
 
                 doc.setFont('helvetica', 'bold');
                 doc.text('Jumlah Keseluruhan (RM)', 150, finalY + 10);
